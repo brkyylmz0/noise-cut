@@ -4,11 +4,12 @@ export default function Document() {
   return (
     <Html lang="tr">
       <Head>
-      <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9543225982689860"
-     crossorigin="anonymous"></script>
-        {/* SEO meta etiketleri */}
+        {/* Gerekli SEO meta etiketleri */}
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9543225982689860"
+         crossorigin="anonymous"></script>
+         <meta name="google-adsense-account" content="ca-pub-9543225982689860"></meta>
         <meta charSet="UTF-8" />
-        <meta name="google-adsense-account" content="ca-pub-9543225982689860"></meta>
+        <meta name="google-site-verification" content="tLu7KLvTnZXspaVDEwe_JC4DZMVxLrvUlKQ1ixoS-Pc" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="description" content="Online ses dosyası sessiz kısımları kırpma aracı. Hızlı, ücretsiz ve reklama uygun web uygulaması." />
         <meta name="keywords" content="ses kırpma, audio trim, sessiz kısımları kaldır, mp3 kırp, wav, online, ücretsiz, web, silence remover, silence cutter" />
@@ -20,20 +21,13 @@ export default function Document() {
         <meta property="og:locale" content="tr_TR" />
         <meta property="og:url" content="https://ornek-site.com" />
         <meta property="og:image" content="/logo.png" />
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/favicon.png" />
+        {/* Google için ek SEO */}
+        <meta name="google-site-verification" content="GOOGLE_VERIFICATION_KODUNUZ" />
         <title>Ses Dosyası Sessiz Kısımları Kırpma | Online Araç</title>
-        {/* Google Analytics */}
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
-        <script dangerouslySetInnerHTML={{
-          __html: `
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-XXXXXXXX');
-          `,
-        }} />
       </Head>
       <body>
+        
         <Main />
         <NextScript />
       </body>

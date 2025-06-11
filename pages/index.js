@@ -1,9 +1,29 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 
 export default function Home() {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const scriptId = "adsbygoogle-js";
+    if (!document.getElementById(scriptId)) {
+      const script = document.createElement("script");
+      script.id = scriptId;
+      script.async = true;
+      script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9543225982689860";
+      script.crossOrigin = "anonymous";
+      document.head.appendChild(script);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (window.adsbygoogle && document.querySelector(".adsbygoogle")) {
+      try {
+        window.adsbygoogle.push({});
+      } catch (e) {}
+    }
+  });
   const [audioUrl, setAudioUrl] = useState(null);
   const [processedUrl, setProcessedUrl] = useState(null);
-  const [progress, setProgress] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
   const audioRef = useRef();
 
   const handleFileChange = async (e) => {
@@ -15,265 +35,206 @@ export default function Home() {
   };
 
   const handleProcess = async () => {
-    if (!audioRef.current) return;
-    setProgress(0.01);
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const response = await fetch(audioUrl);
-    const arrayBuffer = await response.arrayBuffer();
-    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-    // Sessiz kısımları bul ve çıkar
-    const threshold = 0.02;
-    const minSilenceDuration = 0.3; // saniye
-    const sampleRate = audioBuffer.sampleRate;
-    const channelData = audioBuffer.getChannelData(0);
-    let segments = [];
-    let segmentStart = null;
-    let silenceStart = null;
-    for (let i = 0; i < channelData.length; i++) {
-      if (Math.abs(channelData[i]) > threshold) {
-        if (segmentStart === null) segmentStart = i;
-        silenceStart = null;
-      } else {
-        if (segmentStart !== null && silenceStart === null) {
-          silenceStart = i;
-        }
-        if (
-          segmentStart !== null &&
-          silenceStart !== null &&
-          (i - silenceStart) / sampleRate > minSilenceDuration
-        ) {
-          segments.push([segmentStart, silenceStart]);
-          segmentStart = null;
+    setIsProcessing(true);
+    try {
+      if (!audioRef.current) return;
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const response = await fetch(audioUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      // Sessiz kısımları bul ve çıkar
+      const threshold = 0.02;
+      const minSilenceDuration = 0.3; // saniye
+      const sampleRate = audioBuffer.sampleRate;
+      const channelData = audioBuffer.getChannelData(0);
+      let segments = [];
+      let segmentStart = null;
+      let silenceStart = null;
+      for (let i = 0; i < channelData.length; i++) {
+        if (Math.abs(channelData[i]) > threshold) {
+          if (segmentStart === null) segmentStart = i;
           silenceStart = null;
+        } else {
+          if (segmentStart !== null && silenceStart === null) {
+            silenceStart = i;
+          }
+          if (
+            segmentStart !== null &&
+            silenceStart !== null &&
+            (i - silenceStart) / sampleRate > minSilenceDuration
+          ) {
+            segments.push([segmentStart, silenceStart]);
+            segmentStart = null;
+            silenceStart = null;
+          }
         }
       }
-    }
-    if (segmentStart !== null) {
-      segments.push([segmentStart, channelData.length]);
-    }
-    // Segmentleri birleştir
-    const totalLength = segments.reduce(
-      (sum, [start, end]) => sum + (end - start),
-      0
-    );
-    const resultBuffer = audioCtx.createBuffer(
-      1,
-      totalLength,
-      sampleRate
-    );
-    let offset = 0;
-    const resultData = resultBuffer.getChannelData(0);
-    const fadeDuration = Math.floor(sampleRate * 0.005); // 5 ms fade
-    for (let idx = 0; idx < segments.length; idx++) {
-      const [start, end] = segments[idx];
-      const segLen = end - start;
-      const seg = channelData.slice(start, end);
-      // Fade in
-      for (let i = 0; i < Math.min(fadeDuration, segLen); i++) {
-        seg[i] *= i / fadeDuration;
+      if (segmentStart !== null) {
+        segments.push([segmentStart, channelData.length]);
       }
-      // Fade out
-      for (let i = 0; i < Math.min(fadeDuration, segLen); i++) {
-        seg[segLen - 1 - i] *= i / fadeDuration;
-      }
-      resultData.set(seg, offset);
-      offset += segLen;
-      setProgress((idx + 1) / segments.length);
-    }
-    setProgress(1);
-    // WAV dosyası olarak export et
-    // WAV dosyası olarak export et
-    function encodeWAV(buffer) {
-      const length = buffer.length * 2 + 44;
-      const arrayBuffer = new ArrayBuffer(length);
-      const view = new DataView(arrayBuffer);
-      function writeString(view, offset, string) {
-        for (let i = 0; i < string.length; i++) {
-          view.setUint8(offset + i, string.charCodeAt(i));
-        }
-      }
+      // Segmentleri birleştir
+      const totalLength = segments.reduce(
+        (sum, [start, end]) => sum + (end - start),
+        0
+      );
+      const resultBuffer = audioCtx.createBuffer(
+        1,
+        totalLength,
+        sampleRate
+      );
       let offset = 0;
-      writeString(view, offset, "RIFF"); offset += 4;
-      view.setUint32(offset, 36 + buffer.length * 2, true); offset += 4;
-      writeString(view, offset, "WAVE"); offset += 4;
-      writeString(view, offset, "fmt "); offset += 4;
-      view.setUint32(offset, 16, true); offset += 4;
-      view.setUint16(offset, 1, true); offset += 2;
-      view.setUint16(offset, 1, true); offset += 2;
-      view.setUint32(offset, sampleRate, true); offset += 4;
-      view.setUint32(offset, sampleRate * 2, true); offset += 4;
-      view.setUint16(offset, 2, true); offset += 2;
-      view.setUint16(offset, 16, true); offset += 2;
-      writeString(view, offset, "data"); offset += 4;
-      view.setUint32(offset, buffer.length * 2, true); offset += 4;
-      for (let i = 0; i < buffer.length; i++, offset += 2) {
-        let s = Math.max(-1, Math.min(1, buffer[i]));
-        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      const resultData = resultBuffer.getChannelData(0);
+      const fadeDuration = Math.floor(sampleRate * 0.005); // 5 ms fade
+      segments.forEach(([start, end]) => {
+        const segLen = end - start;
+        const seg = channelData.slice(start, end);
+        // Fade in
+        for (let i = 0; i < Math.min(fadeDuration, segLen); i++) {
+          seg[i] *= i / fadeDuration;
+        }
+        // Fade out
+        for (let i = 0; i < Math.min(fadeDuration, segLen); i++) {
+          seg[segLen - 1 - i] *= i / fadeDuration;
+        }
+        resultData.set(seg, offset);
+        offset += segLen;
+      });
+      // WAV dosyası olarak export et
+      function encodeWAV(buffer) {
+        const length = buffer.length * 2 + 44;
+        const arrayBuffer = new ArrayBuffer(length);
+        const view = new DataView(arrayBuffer);
+        function writeString(view, offset, string) {
+          for (let i = 0; i < string.length; i++) {
+            view.setUint8(offset + i, string.charCodeAt(i));
+          }
+        }
+        let offset = 0;
+        writeString(view, offset, "RIFF"); offset += 4;
+        view.setUint32(offset, 36 + buffer.length * 2, true); offset += 4;
+        writeString(view, offset, "WAVE"); offset += 4;
+        writeString(view, offset, "fmt "); offset += 4;
+        view.setUint32(offset, 16, true); offset += 4;
+        view.setUint16(offset, 1, true); offset += 2;
+        view.setUint16(offset, 1, true); offset += 2;
+        view.setUint32(offset, sampleRate, true); offset += 4;
+        view.setUint32(offset, sampleRate * 2, true); offset += 4;
+        view.setUint16(offset, 2, true); offset += 2;
+        view.setUint16(offset, 16, true); offset += 2;
+        writeString(view, offset, "data"); offset += 4;
+        view.setUint32(offset, buffer.length * 2, true); offset += 4;
+        for (let i = 0; i < buffer.length; i++, offset += 2) {
+          let s = Math.max(-1, Math.min(1, buffer[i]));
+          view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        }
+        return new Blob([arrayBuffer], { type: "audio/wav" });
       }
-      return new Blob([arrayBuffer], { type: "audio/wav" });
+      const wavBlob = encodeWAV(resultData);
+      setProcessedUrl(URL.createObjectURL(wavBlob));
+    } finally {
+      setIsProcessing(false);
     }
-    const wavBlob = encodeWAV(resultData);
-    setProcessedUrl(URL.createObjectURL(wavBlob));
   };
 
   return (
-    <div className="layout-root">
-      <header className="ad-header">
-  <div className="ad-box">
-    <span className="ad-title">Reklam</span>
-    {/* Google AdSense örneği */}
-    <ins className="adsbygoogle"
-      style={{ display: 'block', textAlign: 'center' }}
-      data-ad-client="ca-pub-9543225982689860"
-      data-ad-slot="1234567890"
-      data-ad-format="auto"
-      data-full-width-responsive="true"></ins>
-  </div>
-</header>
-      <div className="layout-center">
-        <aside className="ad-side ad-left">
-  <div className="ad-box">
-    <span className="ad-title">Reklam</span>
-    <ins className="adsbygoogle"
-      style={{ display: 'block' }}
-      data-ad-client="ca-pub-9543225982689860"
-      data-ad-slot="1234567891"
-      data-ad-format="rectangle"
-      data-full-width-responsive="true"></ins>
-  </div>
-</aside>
-        <main className="main-center">
-          <div className="card">
-            <h2 className="title">🔊 Ses Dosyası Yükle & Kırp</h2>
-            <label className="file-label">
-              <input
-                type="file"
-                accept="audio/*"
-                onChange={handleFileChange}
-                className="file-input"
-              />
-              <span>Dosya Seç</span>
-            </label>
-            {audioUrl && (
-              <div className="audio-section">
-                <audio ref={audioRef} src={audioUrl} controls className="audio-player" />
-              </div>
-            )}
-            {audioUrl && (
-              <>
-                <button className="process-btn" onClick={handleProcess}>
-                  Sessiz Kısımları Kırp
-                </button>
-                <button className="reset-btn" onClick={() => {
-                  setAudioUrl(null);
-                  setProcessedUrl(null);
-                  setProgress(0);
-                  if (audioRef.current) audioRef.current.src = "";
-                }}>
-                  Sıfırla
-                </button>
-                {progress > 0 && progress < 1 && (
-                  <div className="progress-bar-wrap">
-                    <div className="progress-bar" style={{width: `${Math.round(progress*100)}%`}} />
-                    <span className="progress-label">Kırpılıyor... %{Math.round(progress*100)}</span>
-                  </div>
-                )}
-              </>
-            )}
-            {processedUrl && (
-              <div className="audio-section">
-                <h4>Kırpılmış Ses</h4>
-                <audio src={processedUrl} controls className="audio-player" />
-                <a href={processedUrl} download="trimmed.wav" className="download-link">
-                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" style={{marginRight:4}}><path fill="currentColor" d="M12 16a1 1 0 0 1-1-1V5a1 1 0 1 1 2 0v10a1 1 0 0 1-1 1Zm4.71-3.71a1 1 0 0 0-1.42 1.42l3.3 3.3a1 1 0 0 1-.71 1.7H6.12a1 1 0 0 1-.7-1.7l3.29-3.3a1 1 0 0 0-1.41-1.42l-3.3 3.3A3 3 0 0 0 6.12 21h11.76a3 3 0 0 0 2.12-5.12l-3.29-3.3Z"/></svg>
-                  İndir
-                </a>
-              </div>
-            )}
+    <div className="main-container">
+      <div className="card">
+        <h2 className="title">🔊 Ses Dosyası Yükle & Kırp</h2>
+        {/* ENİ GENİŞ AdSense Reklamı */}
+        <div style={{margin:'0 0 18px 0', width:'100%'}}>
+          <ins className="adsbygoogle"
+            style={{display:'block'}}
+            data-ad-client="ca-pub-9543225982689860"
+            data-ad-slot="7162891258"
+            data-ad-format="auto"
+            data-full-width-responsive="true"
+          ></ins>
+        </div>
+        <label className="file-label">
+          <input
+            type="file"
+            accept="audio/*"
+            onChange={handleFileChange}
+            className="file-input"
+          />
+          <span>Dosya Seç</span>
+        </label>
+        {audioUrl && (
+          <div className="audio-section">
+            <audio ref={audioRef} src={audioUrl} controls className="audio-player" />
           </div>
-        </main>
-        <aside className="ad-side ad-right">
-  <div className="ad-box">
-    <span className="ad-title">Reklam</span>
-    <ins className="adsbygoogle"
-      style={{ display: 'block' }}
-      data-ad-client="ca-pub-9543225982689860"
-      data-ad-slot="1234567892"
-      data-ad-format="rectangle"
-      data-full-width-responsive="true"></ins>
-  </div>
-</aside>
+        )}
+        {audioUrl && (
+          <div style={{marginBottom:18, marginTop:8}}>
+            {/* Google AdSense Reklamı */}
+            <ins className="adsbygoogle"
+              style={{display:'block'}}
+              data-ad-client="ca-pub-9543225982689860"
+              data-ad-slot="3032074556"
+              data-ad-format="auto"
+              data-full-width-responsive="true"
+            ></ins>
+          </div>
+        )}
+        {audioUrl && (
+          <>
+            <button className="process-btn" onClick={handleProcess} disabled={isProcessing}>
+              {isProcessing ? "İşleniyor..." : "Sessiz Kısımları Kırp"}
+            </button>
+            <button className="reset-btn" onClick={() => {
+              setAudioUrl(null);
+              setProcessedUrl(null);
+              if (audioRef.current) audioRef.current.src = "";
+            }} disabled={isProcessing}>
+              Sıfırla
+            </button>
+            {isProcessing && (
+              <div className="progress-bar-wrapper">
+                <div className="progress-bar">
+                  <div className="progress-bar-inner"></div>
+                </div>
+                <span style={{display:'block',textAlign:'center',color:'#6366f1',marginTop:8,fontWeight:500}}>Ses işleniyor...</span>
+              </div>
+            )}
+          </>
+        )}
+        {processedUrl && (
+          <div className="audio-section">
+            <h4>Kırpılmış Ses</h4>
+            <audio src={processedUrl} controls className="audio-player" />
+            <a href={processedUrl} download="trimmed.wav" className="download-link">
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" style={{marginRight:4}}><path fill="currentColor" d="M12 16a1 1 0 0 1-1-1V5a1 1 0 1 1 2 0v10a1 1 0 0 1-1 1Zm4.71-3.71a1 1 0 0 0-1.42 1.42l3.3 3.3a1 1 0 0 1-.71 1.7H6.12a1 1 0 0 1-.7-1.7l3.29-3.3a1 1 0 0 0-1.41-1.42l-3.3 3.3A3 3 0 0 0 6.12 21h11.76a3 3 0 0 0 2.12-5.12l-3.29-3.3Z"/></svg>
+              İndir
+            </a>
+          </div>
+        )}
+        {/* Dikey Google AdSense Reklamı */}
+        <div style={{margin:'32px 0 0 0', width:'100%'}}>
+          <ins className="adsbygoogle"
+            style={{display:'block'}}
+            data-ad-client="ca-pub-9543225982689860"
+            data-ad-slot="3742505087"
+            data-ad-format="auto"
+            data-full-width-responsive="true"
+          ></ins>
+        </div>
+        {/* Autorelaxed Google AdSense Reklamı */}
+        <div style={{margin:'18px 0 0 0', width:'100%'}}>
+          <ins className="adsbygoogle"
+            style={{display:'block'}}
+            data-ad-format="autorelaxed"
+            data-ad-client="ca-pub-9543225982689860"
+            data-ad-slot="1040320121"
+          ></ins>
+        </div>
       </div>
-      <footer className="ad-footer">
-  <div className="ad-box">
-    <span className="ad-title">Reklam</span>
-    <ins className="adsbygoogle"
-      style={{ display: 'block', textAlign: 'center' }}
-      data-ad-client="ca-pub-9543225982689860"
-      data-ad-slot="1234567893"
-      data-ad-format="auto"
-      data-full-width-responsive="true"></ins>
-  </div>
-</footer>
       <style jsx>{`
-        .layout-root {
+        .main-container {
           min-height: 100vh;
           display: flex;
-          flex-direction: column;
+          align-items: center;
+          justify-content: center;
           background: linear-gradient(135deg, #f7fafc 0%, #e3e8ee 100%);
-        }
-        .ad-header {
-          height: 120px;
-          background: #fffbe0;
-          color: #b45309;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.1rem;
-          font-weight: 600;
-          border-bottom: 2px solid #fde68a;
-        }
-        .layout-center {
-          display: flex;
-          flex: 1;
-          min-height: 0;
-        }
-        .ad-side {
-          width: 300px;
-          background: #f1f5f9;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #64748b;
-          font-size: 1.05rem;
-          font-weight: 500;
-          border-left: 1px solid #e5e7eb;
-          border-right: 1px solid #e5e7eb;
-        }
-        .ad-left {
-          border-left: none;
-        }
-        .ad-right {
-          border-right: none;
-        }
-        .main-center {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-width: 0;
-        }
-        .ad-footer {
-        
-          height: 90px;
-          background: #fffbe0;
-          color: #b45309;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.05rem;
-          font-weight: 600;
-          border-top: 2px solid #fde68a;
         }
         .card {
           background: #fff;
@@ -377,31 +338,27 @@ export default function Home() {
         .reset-btn:hover {
           background: #dc2626;
         }
-        .progress-bar-wrap {
+        .progress-bar-wrapper {
           width: 100%;
-          margin: 14px 0 0 0;
-          background: #f1f5f9;
-          border-radius: 6px;
-          position: relative;
-          height: 28px;
-          display: flex;
-          align-items: center;
+          margin: 18px 0 0 0;
         }
         .progress-bar {
-          background: linear-gradient(90deg, #6366f1 0%, #22d3ee 100%);
-          height: 100%;
+          width: 100%;
+          height: 10px;
+          background: #e0e7ff;
           border-radius: 6px;
-          transition: width 0.2s;
+          overflow: hidden;
+          box-shadow: 0 1px 4px 0 rgba(99,102,241,0.07);
         }
-        .progress-label {
-          position: absolute;
-          left: 50%;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          font-size: 1rem;
-          color: #334155;
-          font-weight: 600;
-          pointer-events: none;
+        .progress-bar-inner {
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, #6366f1 20%, #0ea5e9 100%);
+          animation: progressBarAnim 1.1s linear infinite;
+        }
+        @keyframes progressBarAnim {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
         }
       `}</style>
     </div>
