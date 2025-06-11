@@ -118,9 +118,30 @@ export default function Home() {
 
   return (
     <div className="layout-root">
-      <header className="ad-header">Reklam Alanı (Header)</header>
+      <header className="ad-header">
+  <div className="ad-box">
+    <span className="ad-title">Reklam</span>
+    {/* Google AdSense örneği */}
+    <ins className="adsbygoogle"
+      style={{ display: 'block', textAlign: 'center' }}
+      data-ad-client="ca-pub-9543225982689860"
+      data-ad-slot="1234567890"
+      data-ad-format="auto"
+      data-full-width-responsive="true"></ins>
+  </div>
+</header>
       <div className="layout-center">
-        <aside className="ad-side ad-left">Reklam Alanı (Sol)</aside>
+        <aside className="ad-side ad-left">
+  <div className="ad-box">
+    <span className="ad-title">Reklam</span>
+    <ins className="adsbygoogle"
+      style={{ display: 'block' }}
+      data-ad-client="ca-pub-9543225982689860"
+      data-ad-slot="1234567891"
+      data-ad-format="rectangle"
+      data-full-width-responsive="true"></ins>
+  </div>
+</aside>
         <main className="main-center">
           <div className="card">
             <h2 className="title">🔊 Ses Dosyası Yükle & Kırp</h2>
@@ -171,9 +192,29 @@ export default function Home() {
             )}
           </div>
         </main>
-        <aside className="ad-side ad-right">Reklam Alanı (Sağ)</aside>
+        <aside className="ad-side ad-right">
+  <div className="ad-box">
+    <span className="ad-title">Reklam</span>
+    <ins className="adsbygoogle"
+      style={{ display: 'block' }}
+      data-ad-client="ca-pub-9543225982689860"
+      data-ad-slot="1234567892"
+      data-ad-format="rectangle"
+      data-full-width-responsive="true"></ins>
+  </div>
+</aside>
       </div>
-      <footer className="ad-footer">Reklam Alanı (Footer)</footer>
+      <footer className="ad-footer">
+  <div className="ad-box">
+    <span className="ad-title">Reklam</span>
+    <ins className="adsbygoogle"
+      style={{ display: 'block', textAlign: 'center' }}
+      data-ad-client="ca-pub-9543225982689860"
+      data-ad-slot="1234567893"
+      data-ad-format="auto"
+      data-full-width-responsive="true"></ins>
+  </div>
+</footer>
       <style jsx>{`
         .layout-root {
           min-height: 100vh;
@@ -223,6 +264,7 @@ export default function Home() {
           min-width: 0;
         }
         .ad-footer {
+        
           height: 90px;
           background: #fffbe0;
           color: #b45309;
