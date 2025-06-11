@@ -4,6 +4,8 @@ export default function Document() {
   return (
     <Html lang="tr">
       <Head>
+      <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9543225982689860"
+     crossorigin="anonymous"></script>
         {/* SEO meta etiketleri */}
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />

@@ -1,0 +1,5 @@
+# Google AdSense örnek satırı (kendi yayıncı kimliğinizi ekleyin)
+google.com, pub-9543225982689860, DIRECT, f08c47fec0942fa0
+
+# Diğer reklam ağları için örnek
+# example.com, 12345, RESELLER, abcdef123456
