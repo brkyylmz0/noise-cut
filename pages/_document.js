@@ -8,6 +8,7 @@ export default function Document() {
      crossorigin="anonymous"></script>
         {/* SEO meta etiketleri */}
         <meta charSet="UTF-8" />
+        <meta name="google-adsense-account" content="ca-pub-9543225982689860"></meta>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="description" content="Online ses dosyası sessiz kısımları kırpma aracı. Hızlı, ücretsiz ve reklama uygun web uygulaması." />
         <meta name="keywords" content="ses kırpma, audio trim, sessiz kısımları kaldır, mp3 kırp, wav, online, ücretsiz, web, silence remover, silence cutter" />
