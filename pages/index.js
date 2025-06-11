@@ -150,6 +150,9 @@ export default function Home() {
             data-full-width-responsive="true"
           ></ins>
         </div>
+        <p className="app-desc">
+          Bu uygulama, ses dosyalarındaki sessiz kısımları otomatik olarak tespit edip kırpar. Dosyanı yükle, işleme başla ve temizlenmiş ses dosyanı hemen indir!
+        </p>
         <label className="file-label">
           <input
             type="file"
@@ -337,6 +340,16 @@ export default function Home() {
         }
         .reset-btn:hover {
           background: #dc2626;
+        }
+        .app-desc {
+          margin: 0 0 18px 0;
+          color: #374151;
+          background: #f1f5f9;
+          padding: 12px 18px;
+          border-radius: 8px;
+          font-size: 1.05rem;
+          text-align: center;
+          box-shadow: 0 1px 8px 0 rgba(0,0,0,0.03);
         }
         .progress-bar-wrapper {
           width: 100%;
